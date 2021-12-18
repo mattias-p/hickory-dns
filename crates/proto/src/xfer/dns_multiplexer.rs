@@ -375,8 +375,8 @@ where
                     messages_received = i;
 
                     //   deserialize or log decode_error
-                    match buffer.to_message() {
-                        Ok(message) => match self.active_requests.entry(message.id()) {
+                    match buffer.id() {
+                        Ok(id) => match self.active_requests.entry(id) {
                             Entry::Occupied(mut request_entry) => {
                                 // send the response, complete the request...
                                 let active_request = request_entry.get_mut();
@@ -387,12 +387,15 @@ where
                                             .try_send(verifier(buffer.bytes())),
                                     );
                                 } else {
-                                    ignore_send(
-                                        active_request.completion.try_send(Ok(message.into())),
-                                    );
+                                    match buffer.to_message() {
+                                        Ok(message) => ignore_send(
+                                            active_request.completion.try_send(Ok(message.into())),
+                                        ),
+                                        Err(e) => debug!("error decoding message: {}", e),
+                                    }
                                 }
                             }
-                            Entry::Vacant(..) => debug!("unexpected request_id: {}", message.id()),
+                            Entry::Vacant(..) => debug!("unexpected request_id: {}", id),
                         },
                         // TODO: return src address for diagnostics
                         Err(e) => debug!("error decoding message: {}", e),

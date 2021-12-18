@@ -9,6 +9,7 @@ use std::net::SocketAddr;
 
 use crate::error::ProtoResult;
 use crate::op::Message;
+use crate::serialize::binary::BinDecoder;
 
 /// A DNS message in serialized form, with either the target address or source address
 pub struct SerialMessage {
@@ -46,6 +47,13 @@ impl SerialMessage {
     /// Deserializes the inner data into a Message
     pub fn to_message(&self) -> ProtoResult<Message> {
         Message::from_vec(&self.message)
+    }
+
+    /// Get the DNS header ID
+    pub fn id(&self) -> ProtoResult<u16> {
+        Ok(BinDecoder::new(&self.message)
+            .read_u16()?
+            .unverified(/*it is valid for this to be any u16*/))
     }
 }
 
